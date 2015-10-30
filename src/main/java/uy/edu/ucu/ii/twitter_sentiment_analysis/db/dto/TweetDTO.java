@@ -13,7 +13,7 @@ import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto.Tweet;
 
 @Entity
 @Table(name = "twitt")
-public class TwittDTO implements Serializable {
+public class TweetDTO implements Serializable {
 	/**
 	 * 
 	 */
@@ -33,13 +33,13 @@ public class TwittDTO implements Serializable {
 	private float pos;
 	private String label;
 
-	public TwittDTO() {
+	public TweetDTO() {
 		
 	}
-	public TwittDTO(Integer idConsulta, Tweet t, SentimentResponse sentiment) {
+	public TweetDTO(Integer idConsulta, Tweet t, SentimentResponse sentiment) {
 		this.id = t.getId();
 		this.text = t.getText();
-		this.cratedAt = t.getCratedAt();
+		this.cratedAt = t.getCreated_at();
 		this.fechaCosnulta = new Date();
 		this.idConsulta = idConsulta;
 		this.neg = sentiment.getNeg();

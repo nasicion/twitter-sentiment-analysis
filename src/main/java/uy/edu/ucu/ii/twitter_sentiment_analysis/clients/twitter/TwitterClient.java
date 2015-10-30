@@ -1,8 +1,10 @@
 package uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter;
 
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Type;
 import java.net.URLEncoder;
-import java.util.HashMap;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.scribe.builder.ServiceBuilder;
@@ -13,11 +15,18 @@ import org.scribe.model.Token;
 import org.scribe.model.Verb;
 import org.scribe.oauth.OAuthService;
 
+import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto.RetweetedStatus;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto.Tweet;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto.TwitterErrors;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto.TwitterSearchResponse;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 
 public class TwitterClient {
 	private static final String TWITTER_API_URL = "https://api.twitter.com/1.1/search/tweets.json";
@@ -78,10 +87,11 @@ public class TwitterClient {
 	/**
 	 * Obtiene <cantidad> de tweets para el parametro de busqueda
 	 * @param query
+	 * @param sinceId 
 	 * @param sinceId - el id minimo para los twitts
 	 * @return
 	 */
-	public ConcurrentHashMap<Long, Tweet> getNTwitts(String query, Integer cantidad, boolean avoidRTs) {
+	public ConcurrentHashMap<Long, Tweet> getNTwitts(String query, Integer cantidad, Long sinceId, boolean avoidRTs) {
 		System.out.println("Obteniendo " + cantidad + " tweets...");
 		ConcurrentHashMap<Long, Tweet> tweets = new ConcurrentHashMap<Long,Tweet>(cantidad);
 		TwitterSearchResponse tsr = null;
@@ -91,6 +101,9 @@ public class TwitterClient {
 					"?lang=en&count=" + count  + "&q=" + 
 					URLEncoder.encode(query, "UTF-8");
 			
+			if(sinceId != null) {
+				url += "&since_id="+sinceId;
+			}
 			
 			do{
 				OAuthService service = new ServiceBuilder().provider(TwitterApi.class)
@@ -99,7 +112,11 @@ public class TwitterClient {
 				Token accessToken = new Token(TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET);
 				service.signRequest(accessToken, request);
 				Response response = request.send();
-				Gson g = new Gson();
+				
+				GsonBuilder gsonBuilder = new GsonBuilder();
+				gsonBuilder.registerTypeAdapter(Tweet.class, new TweetDeserializer());
+				
+				Gson g = gsonBuilder.create();
 				tsr = g.fromJson(response.getBody(), TwitterSearchResponse.class);
 				
 				
@@ -119,6 +136,8 @@ public class TwitterClient {
 					
 					if(tsr.hasMoreResults()) {
 						url = TWITTER_API_URL + tsr.getSearch_metadata().getNext_results();
+					} else {
+						System.out.println("ATENCION!!: NO HAY MAS RESULTADOS");
 					}
 					
 				} else {
@@ -142,5 +161,32 @@ public class TwitterClient {
 			e.printStackTrace();
 		}
 		return tweets;
+	}
+	public class TweetDeserializer implements JsonDeserializer<Tweet>{
+
+		public Tweet deserialize(JsonElement jsonElement, Type type,
+				JsonDeserializationContext context) throws JsonParseException {
+			Tweet t = new Tweet();
+			JsonObject jsonObject = (JsonObject) jsonElement;
+			
+			t.setId(jsonObject.get("id").getAsLong());
+			t.setText(jsonObject.get("text").getAsString());
+			t.setTruncated(jsonObject.get("truncated").getAsBoolean());
+			
+			String createdAtStr = jsonObject.get("created_at").getAsString();
+			//Fri Oct 30 02:53:02 +0000 2015
+			SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM d H:m:s Z yyyy");
+			
+			try {
+				t.setCreated_at(sdf.parse(createdAtStr));
+			} catch (ParseException e) {
+				e.printStackTrace();
+			}
+			
+			Gson gson = new Gson();
+			t.setRetweeted_status(gson.fromJson(jsonObject.get("retweeted_status"), RetweetedStatus.class));
+			return t;
+		}
+		
 	}
 }

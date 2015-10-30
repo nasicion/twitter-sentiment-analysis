@@ -1,9 +1,12 @@
 package uy.edu.ucu.ii.twitter_sentiment_analysis;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.apache.commons.lang3.StringUtils;
 
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.sa.TextProcessingAPI;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.sa.dto.SentimentResponse;
@@ -11,6 +14,7 @@ import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.TwitterClient;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto.Tweet;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.db.HibernateUtil;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dao.ConsultaDAO;
+import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dao.TweetDAO;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dto.ConsultaDTO;
 
 public class App {
@@ -20,16 +24,27 @@ public class App {
 
 	public static void main(String[] args) {
 		Long start = System.currentTimeMillis();
-		String query = "#BatmanVSuperman";
 		
-		//Obtener los Tweets
-		TwitterClient tc = new TwitterClient();
-		ConcurrentHashMap<Long, Tweet> tweets = tc.getNTwitts(query, 1000, true);
-
+		if(args.length == 0 || StringUtils.isBlank(args[0])) {
+			System.out.println("Uso: java -jar <jar_twitter_sentiment_analysis>.jar [query]");
+			return;
+		}
+		
+		String query = args[0];
+		
 		try {
 			HibernateUtil.getSessionFactory();
 			
+			//Obtener los Tweets
 			ConsultaDTO consulta = getConsulta(query);
+
+			TwitterClient tc = new TwitterClient();
+			
+			boolean evitarRTs = true;
+			Long sinceId = getMaxId(consulta.getId());
+			
+			ConcurrentHashMap<Long, Tweet> tweets = tc.getNTwitts(query, 1000, sinceId, evitarRTs);
+
 			
 			ConcurrentHashMap<Long, SentimentResponse> sentiments = 
 					new ConcurrentHashMap<Long, SentimentResponse>(tweets.size()); 
@@ -90,7 +105,8 @@ public class App {
 	}
 
 	/**
-	 * Obtiene la consulta y si no existe para la query la crea
+	 * Obtiene la consulta y actualiza la fecha de ultima ejecución
+	 * Si no existe para la query la crea y guarda
 	 * @param query
 	 * @return
 	 */
@@ -99,9 +115,21 @@ public class App {
 		
 		ConsultaDTO consulta = consultaDAO.getConsultaForQuery(query);
 		if(consulta == null) {
-			consulta = consultaDAO.save(new ConsultaDTO(query));
+			consulta = consultaDAO.save(new ConsultaDTO(query, new Date()));
+		} else {
+			consulta.setLastExecution(new Date());
+			consultaDAO.save(consulta);
 		}
 		
 		return consulta;
+	}
+	
+	/**
+	 * Obtiene el id mas grande de tweet para una consulta
+	 * @param idConsulta
+	 * @return
+	 */
+	private static Long getMaxId(Integer idConsulta) {
+		return TweetDAO.getInstance().getMaxId(idConsulta);
 	}
 }

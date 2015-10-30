@@ -1,13 +1,23 @@
 package uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto;
 
+import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 
 public class Tweet implements Comparable<Tweet> {
 	private Long id;
 	private String text;
-	private Date cratedAt;
+	private Date created_at;
 	private boolean truncated;
-	//Indica si el tweet es un retweet, si not null => retweet
+	// Indica si el tweet es un retweet, si not null => retweet
 	private RetweetedStatus retweeted_status;
 
 	public Long getId() {
@@ -26,12 +36,12 @@ public class Tweet implements Comparable<Tweet> {
 		this.text = text;
 	}
 
-	public Date getCratedAt() {
-		return cratedAt;
+	public Date getCreated_at() {
+		return created_at;
 	}
 
-	public void setCratedAt(Date cratedAt) {
-		this.cratedAt = cratedAt;
+	public void setCreated_at(Date created_at) {
+		this.created_at = created_at;
 	}
 
 	public boolean isTruncated() {
@@ -63,4 +73,5 @@ public class Tweet implements Comparable<Tweet> {
 	public boolean isRetweet() {
 		return this.retweeted_status != null;
 	}
+	
 }

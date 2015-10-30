@@ -1,10 +1,10 @@
 package uy.edu.ucu.ii.twitter_sentiment_analysis.db.dto;
 import java.io.Serializable;
+import java.util.Date;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 
@@ -26,11 +26,15 @@ public class ConsultaDTO implements Serializable{
 	@Column(nullable=false, unique=true)
 	private String query;
 
+	@Column(nullable=false)
+	private Date lastExecution;
+
 	public ConsultaDTO() {
 	}
 
-	public ConsultaDTO(String query) {
+	public ConsultaDTO(String query, Date lastExecution) {
 		this.query = query;
+		this.lastExecution = lastExecution;
 	}
 
 	public Integer getId() {
@@ -47,6 +51,14 @@ public class ConsultaDTO implements Serializable{
 
 	public void setQuery(String query) {
 		this.query = query;
+	}
+
+	public Date getLastExecution() {
+		return lastExecution;
+	}
+
+	public void setLastExecution(Date lastExecution) {
+		this.lastExecution = lastExecution;
 	}
 
 	

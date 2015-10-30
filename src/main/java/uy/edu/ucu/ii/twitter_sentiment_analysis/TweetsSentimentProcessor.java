@@ -5,9 +5,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.sa.dto.SentimentResponse;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto.Tweet;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.db.HibernateUtil;
-import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dao.TwittDAO;
+import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dao.TweetDAO;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dto.ConsultaDTO;
-import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dto.TwittDTO;
+import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dto.TweetDTO;
 
 public class TweetsSentimentProcessor extends Thread {
 
@@ -34,8 +34,8 @@ public class TweetsSentimentProcessor extends Thread {
 								
 						Tweet t = this.twitts.remove(tweetId);
 						if(t != null) {
-							TwittDTO twitt = new TwittDTO(consulta.getId(), t, sentiment);
-							TwittDAO.getInstance().save(twitt);
+							TweetDTO twitt = new TweetDTO(consulta.getId(), t, sentiment);
+							TweetDAO.getInstance().save(twitt);
 							System.out.println("Tweets remaining :" + this.twitts.size());
 						}
 					}catch(Exception e) {

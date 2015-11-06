@@ -28,6 +28,9 @@ public class ConsultaDTO implements Serializable{
 
 	@Column(nullable=false)
 	private Date lastExecution;
+	
+	@Column(name="isActive", nullable=false, columnDefinition="boolean default 1")
+	private boolean isActive;
 
 	public ConsultaDTO() {
 	}
@@ -35,6 +38,7 @@ public class ConsultaDTO implements Serializable{
 	public ConsultaDTO(String query, Date lastExecution) {
 		this.query = query;
 		this.lastExecution = lastExecution;
+		this.isActive = true;
 	}
 
 	public Integer getId() {
@@ -59,6 +63,14 @@ public class ConsultaDTO implements Serializable{
 
 	public void setLastExecution(Date lastExecution) {
 		this.lastExecution = lastExecution;
+	}
+
+	public boolean isActive() {
+		return isActive;
+	}
+
+	public void setActive(boolean isActive) {
+		this.isActive = isActive;
 	}
 
 	

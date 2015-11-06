@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.commons.lang3.StringUtils;
 
-import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.sa.TextProcessingAPI;
+import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.sa.SentimentAPI;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.sa.dto.SentimentResponse;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.TwitterClient;
 import uy.edu.ucu.ii.twitter_sentiment_analysis.clients.twitter.dto.Tweet;
@@ -20,44 +20,80 @@ import uy.edu.ucu.ii.twitter_sentiment_analysis.db.dto.ConsultaDTO;
 public class App {
 
 	private static final Integer HILOS_SENTIMENT_API = 50;
-	private static final Integer HILOS_SENTIMENT_PROCESS = 50;
+	private static final Integer HILOS_SENTIMENT_PROCESS = 10;
 
+	public static void pentahoQuery(String query) {
+		main(new String[]{query});
+	}
+	
 	public static void main(String[] args) {
-		Long start = System.currentTimeMillis();
 		
-		if(args.length == 0 || StringUtils.isBlank(args[0])) {
-			System.out.println("Uso: java -jar <jar_twitter_sentiment_analysis>.jar [query]");
-			return;
+		
+//		if(args.length == 0 || StringUtils.isBlank(args[0])) {
+//			System.out.println("Uso: java -jar <jar_twitter_sentiment_analysis>.jar [query]");
+//			return;
+//		}
+		String query = null;
+		if(args.length > 0) {
+			 query = args[0];
 		}
-		
-		String query = args[0];
 		
 		try {
 			HibernateUtil.getSessionFactory();
+			if(StringUtils.isNoneBlank(query))
+			processQuery(query, 2000);
 			
-			//Obtener los Tweets
-			ConsultaDTO consulta = getConsulta(query);
-
-			TwitterClient tc = new TwitterClient();
-			
-			boolean evitarRTs = true;
-			Long sinceId = getMaxId(consulta.getId());
-			
-			ConcurrentHashMap<Long, Tweet> tweets = tc.getNTwitts(query, 1000, sinceId, evitarRTs);
-
-			
-			ConcurrentHashMap<Long, SentimentResponse> sentiments = 
-					new ConcurrentHashMap<Long, SentimentResponse>(tweets.size()); 
-			
-			getSentiments(tweets,sentiments, HILOS_SENTIMENT_API);
-			processTweetsAndSentiment(tweets, sentiments, consulta, HILOS_SENTIMENT_PROCESS);
+			boolean processQuerys = Boolean.getBoolean("processQuerys");
+			if(processQuerys) {
+				List<ConsultaDTO> consultas = getConsultas();
+				ConsultaDAO consultaDAO = new ConsultaDAO();
+				for(ConsultaDTO consulta : consultas) {
+					consulta.setLastExecution(new Date());
+					consultaDAO.save(consulta);
+					processQuery(consulta.getQuery(), 2000);
+				}
+			}
 			
 			HibernateUtil.shutdown();
 		}catch(Exception e){ 
 			e.printStackTrace();
 		} 
-		Long end = System.currentTimeMillis();
-		System.out.println("Tiempo total: " + (end-start) + "ms");
+
+		
+	}
+
+	/**
+	 * Obtiene todas las consultas activas en la base
+	 * @return
+	 */
+	private static List<ConsultaDTO> getConsultas() {
+		return new ConsultaDAO().getConsultasActivas();
+	}
+
+	/**
+	 * Procesa tweets para la query
+	 * @param query
+	 */
+	private static void processQuery(String query, Integer cantidad) {
+		Long start = System.currentTimeMillis();
+		System.out.println("====> Obteniendo Tweets para " + query);
+		//Obtener los Tweets
+		ConsultaDTO consulta = getConsulta(query);
+
+		TwitterClient tc = new TwitterClient();
+		
+		boolean evitarRTs = false;
+		Long sinceId = getMaxId(consulta.getId());
+		
+		ConcurrentHashMap<Long, Tweet> tweets = tc.getNTwitts(query, cantidad, sinceId, evitarRTs);
+
+		
+		ConcurrentHashMap<Long, SentimentResponse> sentiments = 
+				new ConcurrentHashMap<Long, SentimentResponse>(tweets.size()); 
+		
+		getSentiments(tweets,sentiments, HILOS_SENTIMENT_API);
+		processTweetsAndSentiment(tweets, sentiments, consulta, HILOS_SENTIMENT_PROCESS);
+		System.out.println("Tiempo total para " + query + ": " + (System.currentTimeMillis()-start) + "ms");
 	}
 
 	/**
@@ -98,7 +134,8 @@ public class App {
 		ConcurrentLinkedQueue<Tweet> tempTweetMap = new ConcurrentLinkedQueue<Tweet>(tweets.values());
 		
 		for(int i = 0; i < hilosSentimentApi; i++) {
-			Thread t = new TextProcessingAPI(sentiments, tempTweetMap);
+			//Thread t = new TextProcessingAPI(sentiments, tempTweetMap);
+			Thread t = new SentimentAPI(sentiments, tempTweetMap);
 			t.setName("Sentiment Thread " + i);
 			t.start();
 		}

@@ -45,11 +45,6 @@ public class TweetsSentimentProcessor extends Thread {
 			}
 			
 		}
-//		try{
-//			HibernateUtil.shutdown();
-//		} catch (Exception e) {
-//			//Por si 2 hilos no tratan de cerrar la sesión
-//		}
 	}
 
 }
